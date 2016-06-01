@@ -157,6 +157,21 @@ public class MmsDatabase extends MessagingDatabase {
     return TABLE_NAME;
   }
 
+  public int getMessageCount() {
+    SQLiteDatabase db = databaseHelper.getReadableDatabase();
+    Cursor cursor     = null;
+
+    try {
+      cursor = db.query(TABLE_NAME, new String[] {"COUNT(*)"}, null, null, null, null, null);
+
+      if (cursor != null && cursor.moveToFirst()) return cursor.getInt(0);
+      else                                        return 0;
+    } finally {
+      if (cursor != null)
+        cursor.close();
+    }
+  }
+
   public int getMessageCountForThread(long threadId) {
     SQLiteDatabase db = databaseHelper.getReadableDatabase();
     Cursor cursor     = null;
@@ -338,6 +353,11 @@ public class MmsDatabase extends MessagingDatabase {
     Cursor cursor = rawQuery(RAW_ID_WHERE, new String[] {messageId + ""});
     setNotifyConverationListeners(cursor, getThreadIdForMessage(messageId));
     return cursor;
+  }
+
+  public Reader getMessages(MasterSecret masterSecret) {
+    String where = TABLE_NAME + "." + ID + " >= 0";
+    return readerFor(masterSecret, rawQuery(where, null));
   }
 
   public Reader getDecryptInProgressMessages(MasterSecret masterSecret) {
@@ -1058,6 +1078,11 @@ public class MmsDatabase extends MessagingDatabase {
         return null;
 
       return getCurrent();
+    }
+
+    public int getCount() {
+      if (cursor == null) return 0;
+      else                return cursor.getCount();
     }
 
     public MessageRecord getCurrent() {

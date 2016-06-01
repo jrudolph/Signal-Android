@@ -3,8 +3,11 @@ package org.thoughtcrime.securesms.database;
 
 import android.content.Context;
 import android.os.Environment;
+import android.util.Log;
 
 import org.thoughtcrime.securesms.crypto.MasterSecret;
+import org.thoughtcrime.securesms.database.model.MediaMmsMessageRecord;
+import org.thoughtcrime.securesms.database.model.MessageRecord;
 import org.thoughtcrime.securesms.database.model.SmsMessageRecord;
 
 import java.io.File;
@@ -33,8 +36,9 @@ public class PlaintextBackupExporter {
   private static void exportPlaintext(Context context, MasterSecret masterSecret)
       throws IOException
   {
-    int count               = DatabaseFactory.getSmsDatabase(context).getMessageCount();
-    XmlBackup.Writer writer = new XmlBackup.Writer(getPlaintextExportFile().getAbsolutePath(), count);
+    int smsCount               = DatabaseFactory.getSmsDatabase(context).getMessageCount();
+    int mmsCount               = DatabaseFactory.getMmsDatabase(context).getMessageCount();
+    XmlBackup.Writer writer = new XmlBackup.Writer(getPlaintextExportFile().getAbsolutePath(), smsCount + mmsCount);
 
 
     SmsMessageRecord record;
@@ -62,6 +66,22 @@ public class PlaintextBackupExporter {
       skip += ROW_LIMIT;
     } while (reader.getCount() > 0);
 
+    exportMms(context, masterSecret, writer);
+
+    reader.close();
     writer.close();
+  }
+  private static void exportMms(Context context, MasterSecret masterSecret, XmlBackup.Writer writer)
+      throws IOException
+  {
+    MessageRecord mmsRecord;
+    MmsDatabase.Reader reader = DatabaseFactory.getMmsDatabase(context).getMessages(masterSecret);
+
+    while ((mmsRecord = reader.getNext()) != null) {
+      if (mmsRecord instanceof MediaMmsMessageRecord)
+        writer.writeMms(context, masterSecret, (MediaMmsMessageRecord) mmsRecord);
+    }
+
+    reader.close();
   }
 }
